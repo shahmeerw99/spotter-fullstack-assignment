@@ -1,0 +1,23 @@
+# Render blueprint for the Django API (free plan). Frontend goes on Vercel (see README).
+services:
+  - type: web
+    name: safe-haul-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput
+    # One process, many threads: requests mostly wait on external APIs, and the in-memory cache
+    # (analysis -> heatmap) stays shared between requests.
+    startCommand: gunicorn config.wsgi --workers 1 --threads 8 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.1
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: CORS_ALLOWED_ORIGIN_REGEXES
+        value: ^https://.*\.vercel\.app$

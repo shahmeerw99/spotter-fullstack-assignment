@@ -1,0 +1,70 @@
+{
+  "info": {
+    "name": "Safe Haul: weather-aware truck routing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "analysisId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Analyze trip (Dallas to Denver, heavy load)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('3 routes', () => pm.expect(body.routes.length).to.be.at.most(3));",
+              "pm.collectionVariables.set('analysisId', body.analysis_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/routes/analyze",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": \"Dallas, TX\",\n  \"destination\": \"Denver, CO\",\n  \"departure_time\": \"2026-10-25T08:00:00-05:00\",\n  \"load_weight_lb\": 42000,\n  \"checkpoint_interval_miles\": 25\n}"
+        }
+      }
+    },
+    {
+      "name": "Corridor heatmap (0-48 h) for the last analysis",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/heatmap?analysis_id={{analysisId}}" }
+    },
+    {
+      "name": "Analyze with coordinates, 10-mile checkpoints",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/routes/analyze",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": {\"lat\": 41.8781, \"lon\": -87.6298},\n  \"destination\": {\"lat\": 40.7608, \"lon\": -111.8910},\n  \"departure_time\": \"2026-10-25T06:00:00-05:00\",\n  \"load_weight_lb\": 35000,\n  \"checkpoint_interval_miles\": 10\n}"
+        }
+      }
+    },
+    {
+      "name": "Error: location outside the USA (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/routes/analyze",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": {\"lat\": 51.5, \"lon\": -0.12},\n  \"destination\": \"Denver, CO\",\n  \"departure_time\": \"2026-10-25T08:00:00Z\",\n  \"load_weight_lb\": 20000\n}"
+        }
+      }
+    },
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/health" }
+    }
+  ]
+}
